@@ -1,6 +1,5 @@
 
 /*---------------------------------------
-函数型计算器(VC++6.0,Win32 Console)程序由 yu_hua 于2007-07-27设计完成
 功能：
 目前提供了10多个常用数学函数:
     ⑴正弦sin
@@ -42,15 +41,21 @@ sin1.23  <Enter>
 #include <cctype>
 #include <sstream>
 #include <cmath>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
 using namespace std;
 const char Tab=0x9;
 const int  DIGIT=1;
 const int MAXLEN=16384;
+
+struct State {
+	string ex;
+	double res;
+	string cmt;
+}pn;
 char s[MAXLEN],*endss;
 bool back;
 int pcs=15;
+double ans=0;
 double fun(double x,char op[],int *iop) {
     while (op[*iop-1]<32) //本行使得函数嵌套调用时不必加括号,如 arc sin(sin(1.234)) 只需键入arc sin sin 1.234<Enter>
         switch (op[*iop-1]) {
@@ -123,7 +128,23 @@ double calc(char *expr,char **addr) {
                 if (*pp=='(') {
                     cout<< "π右侧遇（" <<endl;back = true; return 0;
                 }
-            } else {
+            }
+			else if(!strncmp(pp,"ANS",3)) {
+                if (last==DIGIT) {
+                    cout<< "ANS左侧遇）" <<endl; back = true; return 0;
+                }
+                ST[ist++]=ans;
+                ST[ist-1]=fun(ST[ist-1],op,&iop);
+                pp += 3;
+                last = DIGIT;
+                if (!strncmp(pp,"ANS",3)) {
+                    cout<< "两个ANS相连" <<endl; back = true; return 0;
+                }
+                if (*pp=='(') {
+                    cout<< "ANS右侧遇（" <<endl;back = true; return 0;
+                }
+			}
+			else {
                 for (i=0; (pf=(char *)fname[i])!=NULL; i++)
                     if (!strncmp(pp,pf,strlen(pf))) break;
                 if (pf!=NULL) {
@@ -177,7 +198,7 @@ operate:        cc = op[iop-1];
             if (last == DIGIT) {
                 cout<< "两数字粘连" <<endl;back = true; return 0;
             }
-            ST[ist++]=strtod(pp,&rexp);
+           	ST[ist++]=strtod(pp,&rexp);
             ST[ist-1]=fun(ST[ist-1],op,&iop);
             if (pp == rexp) {
                 cout<< "非法字符" <<endl;back = true; return 0;
@@ -209,10 +230,6 @@ operate:        cc = op[iop-1];
     return ST[0];
 }
 
-struct State {
-	string ex;
-	string res;
-};
 vector<State> states;
 
 int main(int argc,char **argv) {
@@ -222,27 +239,45 @@ int main(int argc,char **argv) {
         while (1) {
 			back = false;
             cout << "请输入表达式：";
-			State *pn = new State;
             // gets(s);
 			cin.getline(s, MAXLEN);
             if (s[0]==0) break;//
-			if (strcmp((const char*)s, "history") == 0) {
-				for(unsigned int i = 0; i < states.size(); ++i) cout << i << '\t' << states[i].ex << " = " << states[i].res << endl;
+			if (!strcmp((const char*)s, "history")) {
+				if(states.size() == 0)
+					cout << "null" << endl;
+				else
+					for(unsigned int i = 0; i < states.size(); ++i) 
+						cout << i << '\t' << states[i].ex << " = " << states[i].res << '\t' << states[i].cmt << endl;
 				continue;
 			}
+			if(!strncmp((const char*)s, "!", 1)) {
+				char p = *(s+1);
+				unsigned int hisindex = atoi(s+1);
+				pn.ex = s;
+				if(hisindex >= states.size() || p < '0' || p > '9')
+					cout << "index error." << endl;
+				else {
+				// pn.res = states[hisindex].res;
+				cout << s << " = " << setprecision(15) << pn.res << endl;
+				ans = pn.res;
+				states.push_back(pn);
+				}
+				continue;
+			}	
             cout << s <<" = ";
-			pn->ex = s;
+			pn.ex = s;
 			double res = calc(s, &endss);
-            if (back == false) { 
-				cout << setprecision(15) << res << endl; 
-				stringstream ss; ss.str("");
-				ss << setprecision(15) << res << endl;
-				ss >> pn->res;
-			}
+			stringstream ss; ss.str("");
+			ss << setprecision(15) << res << endl;
+			ss >> pn.res;
+			if(back)  
+				pn.cmt = "非法输入参数";
 			else {
-				pn->res = "illegal input parameters";
+				pn.cmt.clear();
+				cout << setprecision(15) << res << endl;
 			}
-			states.push_back(*pn);
+			ans = pn.res;
+			states.push_back(pn);
         }
     } else {
         strncpy(s,argv[1],MAXLEN-1);s[MAXLEN-1]=0;
