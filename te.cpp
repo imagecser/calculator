@@ -13,23 +13,6 @@
     ⑼自然对数ln
     ⑽ｅ指数exp
     ⑾乘幂函数∧
-用法：
-如果要求2的32次幂，可以打入2^32<回车>
-如果要求30度角的正切可键入tan(Pi/6)<回车>
-注意不能打入：tan(30)<Enter>
-如果要求1.23弧度的正弦，有几种方法都有效：
-sin(1.23)<Enter>
-sin 1.23 <Enter>
-sin1.23  <Enter>
-如果验证正余弦的平方和公式,可打入sin(1.23)^2+cos(1.23)^2 <Enter>或sin1.23^2+cos1.23^2 <Enter>
-此外两函数表达式连在一起,自动理解为相乘如：sin1.23cos0.77+cos1.23sin0.77就等价于sin(1.23)*cos(0.77)+cos(1.23)*sin(0.77)
-当然你还可以依据三角变换，再用sin(1.23+0.77)也即sin2验证一下。
-本计算器充分考虑了运算符的优先级因此诸如：2+3*4^2 实际上相当于：2+(3*(4*4))
-另外函数名前面如果是数字,那么自动认为二者相乘.
-同理，如果某数的右侧是左括号，则自动认为该数与括弧项之间隐含一乘号。
-如：3sin1.2^2+5cos2.1^2 相当于3*sin2(1.2)+5*cos2(2.1)
-又如：4(3-2(sqrt5-1)+ln2)+lg5 相当于4*(3-2*(√5 -1)+loge(2))+log10(5)
-此外，本计算器提供了圆周率 Pi键入字母时不区分大小写,以方便使用。
 ----------------------------------------*/
 
 #include <string>
@@ -43,6 +26,7 @@ sin1.23  <Enter>
 #include <cmath>
 #include <cstdio>
 using namespace std;
+#define MAGENTA "\033[35m"      /* Magenta */
 const char Tab=0x9;
 const int  DIGIT=1;
 const int MAXLEN=16384;
@@ -54,8 +38,12 @@ struct State {
 }pn;
 char s[MAXLEN],*endss;
 bool back;
+int state = 10;
 int pcs=15;
 double ans=0;
+
+
+
 double fun(double x,char op[],int *iop) {
     while (op[*iop-1]<32) //本行使得函数嵌套调用时不必加括号,如 arc sin(sin(1.234)) 只需键入arc sin sin 1.234<Enter>
         switch (op[*iop-1]) {
@@ -114,36 +102,52 @@ double calc(char *expr,char **addr) {
             pp++;
             break;
         } else if (isalpha(c)) {
-            if (!strncmp(pp,"Pi",2)) {
+            if (!strncmp(pp,"pi",2)) {
                 if (last==DIGIT) {
                     cout<< "π左侧遇）" <<endl; back = true; return 0;
                 }
-                ST[ist++]=3.14159265358979323846264338328;
+                ST[ist++]=4*atan(1);
                 ST[ist-1]=fun(ST[ist-1],op,&iop);
                 pp += 2;
                 last = DIGIT;
-                if (!strncmp(pp,"Pi",2)) {
+                if (!strncmp(pp,"pi",2)) {
                     cout<< "两个π相连" <<endl; back = true; return 0;
                 }
                 if (*pp=='(') {
                     cout<< "π右侧遇（" <<endl;back = true; return 0;
                 }
             }
-			else if(!strncmp(pp,"ANS",3)) {
+			else if(!strncmp(pp,"ans",3)) {
                 if (last==DIGIT) {
-                    cout<< "ANS左侧遇）" <<endl; back = true; return 0;
+                    cout<< "ans左侧遇）" <<endl; back = true; return 0;
                 }
                 ST[ist++]=ans;
                 ST[ist-1]=fun(ST[ist-1],op,&iop);
                 pp += 3;
                 last = DIGIT;
-                if (!strncmp(pp,"ANS",3)) {
-                    cout<< "两个ANS相连" <<endl; back = true; return 0;
+                if (!strncmp(pp,"ans",3)) {
+                    cout<< "两个ans相连" <<endl; back = true; return 0;
                 }
                 if (*pp=='(') {
-                    cout<< "ANS右侧遇（" <<endl;back = true; return 0;
+                    cout<< "ans右侧遇（" <<endl;back = true; return 0;
                 }
 			}
+			else if(!strncmp(pp,"e",1)) {
+                if (last==DIGIT) {
+                    cout<< "e左侧遇）" <<endl; back = true; return 0;
+                }
+                ST[ist++]=2.718281828459;
+                ST[ist-1]=fun(ST[ist-1],op,&iop);
+                pp += 1;
+                last = DIGIT;
+                if (!strncmp(pp,"ANS",1)) {
+                    cout<< "两个e相连" <<endl; back = true; return 0;
+                }
+                if (*pp=='(') {
+                    cout<< "e右侧遇（" <<endl;back = true; return 0;
+                }
+			}
+
 			else {
                 for (i=0; (pf=(char *)fname[i])!=NULL; i++)
                     if (!strncmp(pp,pf,strlen(pf))) break;
@@ -233,13 +237,14 @@ operate:        cc = op[iop-1];
 vector<State> states;
 
 int main(int argc,char **argv) {
+	cout.setf(ios::fixed);
+	cout.precision(8);
     if (argc<=1) {
         // if (GetConsoleOutputCP()!=936) system("chcp 936>NUL");//中文代码页
-        cout << "计算函数表达式的值。"<<endl<<"支持(),+,-,*,/,^,Pi,sin,cos,tan,sqrt,arcsin,arccos,arctan,lg,ln,exp"<<endl;
+        cout << "计算函数表达式的值。"<<endl<<"支持(),+,-,*,/,^,pi,e,sin,cos,tan,sqrt,arcsin,arccos,arctan,lg,ln,exp"<<endl;
         while (1) {
 			back = false;
             cout << "请输入表达式：";
-            // gets(s);
 			cin.getline(s, MAXLEN);
             if (s[0]==0) break;//
 			if (!strcmp((const char*)s, "history")) {
@@ -258,23 +263,32 @@ int main(int argc,char **argv) {
 					cout << "index error." << endl;
 				else {
 				// pn.res = states[hisindex].res;
-				cout << s << " = " << setprecision(15) << pn.res << endl;
+				cout << s << " = " << pn.res << endl;
 				ans = pn.res;
 				states.push_back(pn);
 				}
 				continue;
-			}	
+			}
+			if(!strncmp((const char*)s, "radix", 5)){
+				stringstream ss;
+				ss << s;
+				ss.seekg(5, ios::beg);
+				int rad;
+				ss >> rad;
+				if(rad < 2) cout << "radix index fault." << endl;
+				continue;	
+			}
             cout << s <<" = ";
 			pn.ex = s;
 			double res = calc(s, &endss);
 			stringstream ss; ss.str("");
-			ss << setprecision(15) << res << endl;
+			ss << res << endl;
 			ss >> pn.res;
 			if(back)  
 				pn.cmt = "非法输入参数";
 			else {
 				pn.cmt.clear();
-				cout << setprecision(15) << res << endl;
+				cout << res << endl;
 			}
 			ans = pn.res;
 			states.push_back(pn);
@@ -284,7 +298,7 @@ int main(int argc,char **argv) {
         if (argc>=3) {
             pcs=atoi(argv[2]);
         } else {
-            printf("%.15lg\n",calc(s,&endss));
+            printf("%.8lg\n",calc(s,&endss));
         }
     }
     return 0;
