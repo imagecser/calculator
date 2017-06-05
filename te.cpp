@@ -34,6 +34,7 @@ const int MAXLEN=16384;
 struct State {
 	string ex;
 	double res;
+    string display;
 	string cmt;
 }pn;
 char s[MAXLEN],*endss;
@@ -42,7 +43,76 @@ int state = 10;
 int pcs=15;
 double ans=0;
 
+long convert(char **p, int state){
+    string num;
+    long part;
+    for(; **p && (((**p >= '0' && **p <= '9') || (**p >= 'A' && **p <= 'Z'))); ++*p)
+        num.push_back(**p);
+    part = strtol(num.c_str(), NULL, state);
+    return part;
+}
 
+double strtodec(char *str, char **p, int radix){
+    *p = str;
+    double intpart = 0, decpart = 0;
+    intpart = convert(p, radix);
+    if(**p == '.') {
+        ++*p;
+        decpart = convert(p, radix);
+        for(;decpart > 1; decpart /= radix);
+    }
+    return intpart + decpart;
+}
+
+
+string radixfint(int decpart, int radix) {
+    string res; 
+    vector<char> chs;
+	for(int i = '0'; i <= '9'; ++i)
+		chs.push_back(i);
+	for(int i = 'A'; i <= 'Z'; ++i)
+		chs.push_back(i);
+    vector<char> decchs;
+    while(decpart > 0) {
+        decchs.push_back(chs[decpart%radix]);
+        decpart /= radix;
+    }
+    for(char i = decchs.size() - 1; i >= 0; --i)
+        res.push_back(decchs[i]);
+    return res;
+}
+
+string radixfnint(double nint, int radix) {
+    string res;
+    vector<char> chs;
+	for(int i = '0'; i <= '9'; ++i)
+		chs.push_back(i);
+	for(int i = 'A'; i <= 'Z'; ++i)
+		chs.push_back(i);
+    for(int i = 0; i < 8; ++i) {
+        nint *= radix;
+        res.push_back(chs[(int)nint]);
+        nint -= (int)nint;
+    }    
+    return res;
+}
+
+string radixfdec(double num, int radix) {
+    bool ism = false;
+    if(num < 0) {
+        ism = true;
+        num = -num;
+    }
+    //整数部分
+    string rtn;
+    rtn += radixfint((int)num, radix);
+    num -= (int)num;
+    rtn += ".";
+    rtn += radixfnint(num, radix);
+    for(int i = rtn.size() - 1; i >= 0 && rtn.size() == '0'; --i) 
+        rtn.pop_back();
+    return ism? "-"+rtn : rtn;
+} 
 
 double fun(double x,char op[],int *iop) {
     while (op[*iop-1]<32) //本行使得函数嵌套调用时不必加括号,如 arc sin(sin(1.234)) 只需键入arc sin sin 1.234<Enter>
@@ -101,7 +171,7 @@ double calc(char *expr,char **addr) {
         else if (c==')') {//右圆括弧
             pp++;
             break;
-        } else if (isalpha(c)) {
+        } else if (islower(c)) {
             if (!strncmp(pp,"pi",2)) {
                 if (last==DIGIT) {
                     cout<< "π左侧遇）" <<endl; back = true; return 0;
@@ -202,7 +272,7 @@ operate:        cc = op[iop-1];
             if (last == DIGIT) {
                 cout<< "两数字粘连" <<endl;back = true; return 0;
             }
-           	ST[ist++]=strtod(pp,&rexp);
+           	ST[ist++]=strtodec(pp,&rexp, state);
             ST[ist-1]=fun(ST[ist-1],op,&iop);
             if (pp == rexp) {
                 cout<< "非法字符" <<endl;back = true; return 0;
@@ -273,9 +343,13 @@ int main(int argc,char **argv) {
 				stringstream ss;
 				ss << s;
 				ss.seekg(5, ios::beg);
+				if(ss.str().size() > 5) {
 				int rad;
 				ss >> rad;
-				if(rad < 2) cout << "radix index fault." << endl;
+				if(rad < 2 || rad > 36) cout << "radix index fault." << endl;
+				else state = rad;
+				}
+				else cout << "radix: " << state << endl;
 				continue;	
 			}
             cout << s <<" = ";
