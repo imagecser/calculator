@@ -14,7 +14,7 @@
     ⑽ｅ指数exp
     ⑾乘幂函数∧
 ----------------------------------------*/
-
+#include <readline/readline.h>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -36,12 +36,15 @@ struct State {
 	double res;
     string display;
 	string cmt;
+    State() {
+        res = 0;
+    }
 }pn;
 char s[MAXLEN],*endss;
 bool back;
 int state = 10;
 int pcs=15;
-double ans=0;
+State ans;
 
 long convert(char **p, int state){
     string num;
@@ -65,9 +68,9 @@ double strtodec(char *str, char **p, int radix){
 }
 
 
+vector<char> chs;
 string radixfint(int decpart, int radix) {
     string res; 
-    vector<char> chs;
 	for(int i = '0'; i <= '9'; ++i)
 		chs.push_back(i);
 	for(int i = 'A'; i <= 'Z'; ++i)
@@ -107,10 +110,12 @@ string radixfdec(double num, int radix) {
     string rtn;
     rtn += radixfint((int)num, radix);
     num -= (int)num;
+    if(rtn.size() == 0) rtn += "0";
     rtn += ".";
     rtn += radixfnint(num, radix);
-    for(int i = rtn.size() - 1; i >= 0 && rtn.size() == '0'; --i) 
+    for(int i = rtn.size() - 1; i >= 0 && rtn[i] == '0'; --i) 
         rtn.pop_back();
+    if(rtn[rtn.size() - 1] == '.') rtn.pop_back();
     return ism? "-"+rtn : rtn;
 } 
 
@@ -142,8 +147,15 @@ double calc(char *expr,char **addr) {
         pp=pf=expr;
         do {
             c = *pp++;
-            if (c!=' '&& c!=Tab)
+            if (c!=' '&& c!=Tab){
+                if(c >= 'A' && c <= 'Z')
+                    if((c - 'A') >= state - 10) {
+                        cout << "超出进制范围" << endl;
+                        back = true;
+                        return 0;
+                    }
                 *pf++ = c;
+            }
         } while (c!='\0');
     }
     pp=expr;
@@ -191,7 +203,7 @@ double calc(char *expr,char **addr) {
                 if (last==DIGIT) {
                     cout<< "ans左侧遇）" <<endl; back = true; return 0;
                 }
-                ST[ist++]=ans;
+                ST[ist++]=ans.res;
                 ST[ist-1]=fun(ST[ist-1],op,&iop);
                 pp += 3;
                 last = DIGIT;
@@ -322,7 +334,7 @@ int main(int argc,char **argv) {
 					cout << "null" << endl;
 				else
 					for(unsigned int i = 0; i < states.size(); ++i) 
-						cout << i << '\t' << states[i].ex << " = " << states[i].res << '\t' << states[i].cmt << endl;
+						cout << i << '\t' << states[i].ex << " = " << states[i].display << '\t' << states[i].cmt << endl;
 				continue;
 			}
 			if(!strncmp((const char*)s, "!", 1)) {
@@ -332,9 +344,9 @@ int main(int argc,char **argv) {
 				if(hisindex >= states.size() || p < '0' || p > '9')
 					cout << "index error." << endl;
 				else {
-				// pn.res = states[hisindex].res;
+				pn.res = states[hisindex].res;
 				cout << s << " = " << pn.res << endl;
-				ans = pn.res;
+				ans = pn;
 				states.push_back(pn);
 				}
 				continue;
@@ -358,13 +370,14 @@ int main(int argc,char **argv) {
 			stringstream ss; ss.str("");
 			ss << res << endl;
 			ss >> pn.res;
+            pn.display = radixfdec(res, state);
 			if(back)  
 				pn.cmt = "非法输入参数";
 			else {
 				pn.cmt.clear();
-				cout << res << endl;
+				cout << pn.display << endl;
 			}
-			ans = pn.res;
+			ans = pn;
 			states.push_back(pn);
         }
     } else {
