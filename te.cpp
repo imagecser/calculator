@@ -15,6 +15,7 @@
     ⑾乘幂函数∧
 ----------------------------------------*/
 #include <readline/readline.h>
+#include <readline/history.h>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -30,6 +31,18 @@ using namespace std;
 const char Tab=0x9;
 const int  DIGIT=1;
 const int MAXLEN=16384;
+
+//auto
+static char** my_completion(const char*, int ,int);
+char* my_generator(const char*,int);
+char * dupstr (char*);
+void *xmalloc (int);
+ 
+char* cmd [] ={ (char*)"sin", (char*)"cos", (char*)"tan" ,(char*)"sqrt", (char*)"arcsin", (char*)"arccos", (char*)"arctan", (char*)"lg", (char*)"ln", 
+    (char*)"ans", (char*)"history", (char*)" " };
+//completion
+
+
 
 struct State {
 	string ex;
@@ -319,16 +332,21 @@ operate:        cc = op[iop-1];
 vector<State> states;
 
 int main(int argc,char **argv) {
+    rl_attempted_completion_function = my_completion;
 	cout.setf(ios::fixed);
 	cout.precision(8);
     if (argc<=1) {
+        char *buf;
         // if (GetConsoleOutputCP()!=936) system("chcp 936>NUL");//中文代码页
-        cout << "计算函数表达式的值。"<<endl<<"支持(),+,-,*,/,^,pi,e,sin,cos,tan,sqrt,arcsin,arccos,arctan,lg,ln,exp"<<endl;
-        while (1) {
-			back = false;
-            cout << "请输入表达式：";
-			cin.getline(s, MAXLEN);
-            if (s[0]==0) break;//
+        //cout << "计算函数表达式的值。"<<endl<<"支持(),+,-,*,/,^,pi,e,sin,cos,tan,sqrt,arcsin,arccos,arctan,lg,ln,exp"<<endl;
+        while (true) {
+            buf = readline(">>");
+            add_history(buf);
+		    rl_bind_key('\t',rl_complete);
+		    back = false;
+            memset(s, 0, sizeof(s)/sizeof(char));
+            strncpy(s, buf, strlen(buf));
+		//cin.getline(s, MAXLEN);
 			if (!strcmp((const char*)s, "history")) {
 				if(states.size() == 0)
 					cout << "null" << endl;
@@ -380,6 +398,7 @@ int main(int argc,char **argv) {
 			ans = pn;
 			states.push_back(pn);
         }
+        free(buf);
     } else {
         strncpy(s,argv[1],MAXLEN-1);s[MAXLEN-1]=0;
         if (argc>=3) {
@@ -389,4 +408,65 @@ int main(int argc,char **argv) {
         }
     }
     return 0;
+}
+
+
+ 
+ 
+static char** my_completion( const char * text , int start,  int end)
+{
+    char **matches;
+ 
+    matches = (char **)NULL;
+ 
+    if (start >= 0)
+        matches = rl_completion_matches ((char*)text, &my_generator);
+    else
+        rl_bind_key('\t',rl_abort);
+ 
+    return (matches);
+ 
+}
+ 
+char* my_generator(const char* text, int state)
+{
+    static int list_index, len;
+    char *name;
+ 
+    if (!state) {
+        list_index = 0;
+        len = strlen (text);
+    }
+   
+    while (list_index < 12 && (name = cmd[list_index])) {
+        list_index++;
+ 
+        if (strncmp (name, text, len) == 0)
+            return (dupstr(name));
+    }
+ 
+    /* If no names matched, then return NULL. */
+    return ((char *)NULL);
+ 
+}
+ 
+char * dupstr (char* s) {
+  char *r;
+ 
+  r = (char*) xmalloc ((strlen (s) + 1));
+  strcpy (r, s);
+  return (r);
+}
+ 
+void * xmalloc (int size)
+{
+    void *buf;
+ 
+    buf = malloc (size);
+    if (!buf) {
+        fprintf (stderr, "Error: Out of memory. Exiting.'n");
+        exit (1);
+    }
+ 
+    return buf;
 }
