@@ -1,24 +1,9 @@
-
-/*---------------------------------------
-功能：
-目前提供了10多个常用数学函数:
-    ⑴正弦sin
-    ⑵余弦cos
-    ⑶正切tan
-    ⑷开平方sqrt
-    ⑸反正弦arcsin
-    ⑹反余弦arccos
-    ⑺反正切arctan
-    ⑻常用对数lg
-    ⑼自然对数ln
-    ⑽ｅ指数exp
-    ⑾乘幂函数∧
-----------------------------------------*/
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <string>
 #include <iostream>
 #include <vector>
+#include <fstream>
 #include <iomanip>
 #include <cstdlib>
 #include <cstring>
@@ -27,7 +12,13 @@
 #include <cmath>
 #include <cstdio>
 using namespace std;
-#define MAGENTA "\033[35m"      /* Magenta */
+#define BLUE "\e[1;4;34m"      /* Magenta */
+#define NUNL "\e[24m"
+#define CYAN "\e[1;36m"
+#define RESET "\e[0m"
+
+#define KRESET "\001\e[0m\002"
+#define KRED "\001\e[1;31m\002"
 const char Tab=0x9;
 const int  DIGIT=1;
 const int MAXLEN=16384;
@@ -39,7 +30,7 @@ char * dupstr (char*);
 void *xmalloc (int);
  
 char* cmd [] ={ (char*)"sin", (char*)"cos", (char*)"tan" ,(char*)"sqrt", (char*)"arcsin", (char*)"arccos", (char*)"arctan", (char*)"lg", (char*)"ln", 
-    (char*)"ans", (char*)"history", (char*)" " };
+    (char*)"ans", (char*)"history", (char*)"radix", (char*)" " };
 //completion
 
 
@@ -340,19 +331,21 @@ int main(int argc,char **argv) {
         // if (GetConsoleOutputCP()!=936) system("chcp 936>NUL");//中文代码页
         //cout << "计算函数表达式的值。"<<endl<<"支持(),+,-,*,/,^,pi,e,sin,cos,tan,sqrt,arcsin,arccos,arctan,lg,ln,exp"<<endl;
         while (true) {
-            buf = readline(">>");
+            cout << RESET;
+            buf = readline(KRED "calc>" KRESET);
             add_history(buf);
 		    rl_bind_key('\t',rl_complete);
 		    back = false;
             memset(s, 0, sizeof(s)/sizeof(char));
             strncpy(s, buf, strlen(buf));
 		//cin.getline(s, MAXLEN);
+            if(s[0] == '\0') break;
 			if (!strcmp((const char*)s, "history")) {
 				if(states.size() == 0)
 					cout << "null" << endl;
 				else
 					for(unsigned int i = 0; i < states.size(); ++i) 
-						cout << i << '\t' << states[i].ex << " = " << states[i].display << '\t' << states[i].cmt << endl;
+						cout << CYAN << i << '\t' <<  BLUE << states[i].ex << NUNL << " = " << RESET << CYAN << states[i].display << RESET << '\t' << states[i].cmt << endl;
 				continue;
 			}
 			if(!strncmp((const char*)s, "!", 1)) {
@@ -363,7 +356,7 @@ int main(int argc,char **argv) {
 					cout << "index error." << endl;
 				else {
 				pn.res = states[hisindex].res;
-				cout << s << " = " << pn.res << endl;
+				cout << BLUE << s << NUNL << " = " << RESET << CYAN << pn.res << RESET << endl;
 				ans = pn;
 				states.push_back(pn);
 				}
@@ -379,33 +372,37 @@ int main(int argc,char **argv) {
 				if(rad < 2 || rad > 36) cout << "radix index fault." << endl;
 				else state = rad;
 				}
-				else cout << "radix: " << state << endl;
+				else cout << BLUE << NUNL << "radix: " << RESET << CYAN << state << endl;
 				continue;	
 			}
-            cout << s <<" = ";
+            cout << BLUE  << s << NUNL <<" = " << RESET;
 			pn.ex = s;
 			double res = calc(s, &endss);
 			stringstream ss; ss.str("");
-			ss << res << endl;
+			ss <<  res << endl;
 			ss >> pn.res;
             pn.display = radixfdec(res, state);
 			if(back)  
 				pn.cmt = "非法输入参数";
 			else {
 				pn.cmt.clear();
-				cout << pn.display << endl;
+				cout << CYAN << pn.display << RESET << endl;
 			}
 			ans = pn;
 			states.push_back(pn);
         }
         free(buf);
     } else {
-        strncpy(s,argv[1],MAXLEN-1);s[MAXLEN-1]=0;
-        if (argc>=3) {
-            pcs=atoi(argv[2]);
-        } else {
-            printf("%.8lg\n",calc(s,&endss));
-        }
+        if(strcmp(argv[1], "help") == 0) {
+            fstream fhelp("/bin/calchelp");
+            while (true) {
+                string shelp;
+                getline(fhelp, shelp);
+                if(!shelp.size()) break;
+                cout << shelp << endl;
+            }
+            fhelp.close();
+    }
     }
     return 0;
 }
@@ -438,7 +435,7 @@ char* my_generator(const char* text, int state)
         len = strlen (text);
     }
    
-    while (list_index < 12 && (name = cmd[list_index])) {
+    while (list_index < 13 && (name = cmd[list_index])) {
         list_index++;
  
         if (strncmp (name, text, len) == 0)
